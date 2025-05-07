@@ -1,0 +1,22 @@
+nelmio_api_doc:
+    documentation:
+        info:
+            title: StudyOn.Billing
+            description: Intaro learning Symfony
+            version: 1.0.0
+            x-build: #CommitHash
+        components:
+            schemas:
+                UserDto:
+                    type: object
+                    properties:
+                        username:
+                            type: string
+                            description: "The user's email address"
+                        password:
+                            type: string
+                            description: "The user's password"
+    use_validation_groups: true
+    areas:
+        path_patterns: # an array of regexps (document only routes under /api, except /api/doc)
+            - ^/api(?!/doc$)

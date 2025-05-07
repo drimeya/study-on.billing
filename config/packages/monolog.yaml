@@ -1,0 +1,34 @@
+monolog:
+    channels: ['deprecation', 'auth', 'security']
+    handlers:
+        main:
+            type: stream
+            path: "%kernel.logs_dir%/%kernel.environment%.log"
+            level: debug
+            channels: ["!event", "!deprecation"]
+        # uncomment to log in your browser
+        # you may have to allow bigger header sizes in your Web server configuration
+        #firephp:
+        #    type: firephp
+        #    level: info
+        #chromephp:
+        #    type: chromephp
+        #    level: info
+        console:
+            type: console
+            process_psr_3_messages: false
+            channels: ["!event", "!doctrine", "!console"]
+        deprecation:
+            type: stream
+            path: "%kernel.logs_dir%/%kernel.environment%.deprecations.log"
+            channels: ["deprecation"]
+        security:
+            type: stream
+            path: "%kernel.logs_dir%/security.log"
+            level: info
+            channels: ["security"]
+        auth:
+            type: stream
+            path: "%kernel.logs_dir%/auth.log"
+            level: info
+            channels: ["auth"]
