@@ -3,7 +3,10 @@ PHP=$(COMPOSE) exec php
 CONSOLE=$(PHP) bin/console
 COMPOSER=$(PHP) composer
 
-full-up: up migrate fixtload
+full-up: up install migrate fixtload
+
+install:
+	@${COMPOSER} install
 
 up:
 	@${COMPOSE} up -d

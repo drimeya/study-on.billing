@@ -18,11 +18,13 @@ use OpenApi\Attributes as OA;
 use Symfony\Component\Security\Core\Annotation\Security;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
+use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
+use App\Service\PaymentService;
 
 class AuthController extends AbstractController
 {
     private JWTTokenManagerInterface $jwtManager;
-    
 
     public function __construct(JWTTokenManagerInterface $jwtManager)
     {
@@ -37,8 +39,8 @@ class AuthController extends AbstractController
             content: new OA\JsonContent(
                 type: "object",
                 properties: [
-                    new OA\Property(property: "username", type: "string"),
-                    new OA\Property(property: "password", type: "string")
+                    new OA\Property(property: "username", type: "string", example: "user@example.com"),
+                    new OA\Property(property: "password", type: "string", example: "password123")
                 ]
             )
         ),
@@ -49,7 +51,8 @@ class AuthController extends AbstractController
                 content: new OA\JsonContent(
                     type: "object",
                     properties: [
-                        new OA\Property(property: "token", type: "string")
+                        new OA\Property(property: "token", type: "string", description: "JWT access token"),
+                        new OA\Property(property: "refresh_token", type: "string", description: "JWT refresh token (valid 30 days)")
                     ]
                 )
             ),
@@ -64,7 +67,7 @@ class AuthController extends AbstractController
     {
         try {
             $content = json_decode($request->getContent(), true);
-            
+
             if (!$content || !isset($content['username']) || !isset($content['password'])) {
                 throw new AuthenticationException('Missing username or password');
             }
@@ -72,14 +75,12 @@ class AuthController extends AbstractController
             $email = $content['username'];
             $password = $content['password'];
 
-            // Находим пользователя по email
             $user = $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
-            
+
             if (!$user) {
                 throw new AuthenticationException('Invalid username');
             }
 
-            // Проверяем пароль
             if (!$passwordHasher->isPasswordValid($user, $password)) {
                 throw new AuthenticationException('Invalid password');
             }
@@ -87,7 +88,6 @@ class AuthController extends AbstractController
             return new JsonResponse(['code' => 401, 'message' => $e->getMessage()], 401);
         }
 
-        // Генерируем JWT токен
         $token = $this->jwtManager->create($user);
 
         return new JsonResponse(['token' => $token], 200);
@@ -107,14 +107,15 @@ class AuthController extends AbstractController
                 content: new OA\JsonContent(
                     type: "object",
                     properties: [
-                        new OA\Property(property: "token", type: "string"),
+                        new OA\Property(property: "token", type: "string", description: "JWT access token"),
+                        new OA\Property(property: "refresh_token", type: "string", description: "JWT refresh token (valid 30 days)"),
                         new OA\Property(property: "roles", type: "array", items: new OA\Items(type: "string"))
                     ]
                 )
             ),
             new OA\Response(
-                response: 400,
-                description: "Validation error"
+                response: 401,
+                description: "Validation error or user already exists"
             )
         ]
     )]
@@ -122,8 +123,11 @@ class AuthController extends AbstractController
     public function register(
         Request $request,
         ValidatorInterface $validator,
-        EntityManagerInterface $entityManager
-    ): JsonResponse 
+        EntityManagerInterface $entityManager,
+        RefreshTokenGeneratorInterface $refreshTokenGenerator,
+        RefreshTokenManagerInterface $refreshTokenManager,
+        PaymentService $paymentService
+    ): JsonResponse
     {
         $serializer = SerializerBuilder::create()->build();
         $userDto = $serializer->deserialize($request->getContent(), UserDto::class, 'json');
@@ -151,9 +155,22 @@ class AuthController extends AbstractController
         $entityManager->persist($user);
         $entityManager->flush();
 
+        // Начисляем стартовый депозит новому пользователю
+        $paymentService->deposit($user, $paymentService->getInitialDeposit());
+
         $token = $this->jwtManager->create($user);
 
-        return new JsonResponse(['token' => $token, 'roles' => $user->getRoles()], 201);
+        $refreshToken = $refreshTokenGenerator->createForUserWithTtl(
+            $user,
+            (new \DateTime())->modify('+1 month')->getTimestamp()
+        );
+        $refreshTokenManager->save($refreshToken);
+
+        return new JsonResponse([
+            'token' => $token,
+            'refresh_token' => $refreshToken->getRefreshToken(),
+            'roles' => $user->getRoles(),
+        ], 201);
     }
 
     #[OA\Get(
@@ -196,7 +213,7 @@ class AuthController extends AbstractController
         ], 200);
     }
 
-    public function onKernelException(ExceptionEvent $event)
+    public function onKernelException(ExceptionEvent $event): void
     {
         $exception = $event->getThrowable();
         $response = new JsonResponse([
@@ -212,4 +229,4 @@ class AuthController extends AbstractController
 
         $event->setResponse($response);
     }
-} 
+}

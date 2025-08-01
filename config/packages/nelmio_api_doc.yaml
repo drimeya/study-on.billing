@@ -5,7 +5,44 @@ nelmio_api_doc:
             description: Intaro learning Symfony
             version: 1.0.0
             x-build: #CommitHash
+        paths:
+            /api/v1/token/refresh:
+                post:
+                    summary: "Refresh JWT token"
+                    tags: ["Auth"]
+                    requestBody:
+                        required: true
+                        content:
+                            application/x-www-form-urlencoded:
+                                schema:
+                                    type: object
+                                    required: [refresh_token]
+                                    properties:
+                                        refresh_token:
+                                            type: string
+                                            description: "Valid refresh token obtained from /auth or /register"
+                    responses:
+                        200:
+                            description: "New access token issued"
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            token:
+                                                type: string
+                                                description: "New JWT access token"
+                                            refresh_token:
+                                                type: string
+                                                description: "New JWT refresh token (TTL updated)"
+                        401:
+                            description: "Invalid or expired refresh token"
         components:
+            securitySchemes:
+                Bearer:
+                    type: http
+                    scheme: bearer
+                    bearerFormat: JWT
             schemas:
                 UserDto:
                     type: object
@@ -16,6 +53,62 @@ nelmio_api_doc:
                         password:
                             type: string
                             description: "The user's password"
+                CourseResponse:
+                    type: object
+                    properties:
+                        code:
+                            type: string
+                            description: "Символьный код курса"
+                            example: "landshaftnoe-proektirovanie"
+                        type:
+                            type: string
+                            enum: [free, rent, buy]
+                            description: "Тип курса"
+                            example: "rent"
+                        price:
+                            type: number
+                            format: float
+                            nullable: true
+                            description: "Стоимость (отсутствует для бесплатных курсов)"
+                            example: 99.90
+                TransactionResponse:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 11
+                        created_at:
+                            type: string
+                            format: date-time
+                            example: "2019-05-20T13:46:07+00:00"
+                        type:
+                            type: string
+                            enum: [payment, deposit]
+                            example: "payment"
+                        course_code:
+                            type: string
+                            nullable: true
+                            description: "Символьный код курса (только для списаний)"
+                            example: "course-1"
+                        amount:
+                            type: number
+                            format: float
+                            example: 159.00
+                        expires_at:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: "Дата окончания аренды (только для арендованных курсов)"
+                            example: "2019-05-27T13:46:07+00:00"
+                ErrorResponse:
+                    type: object
+                    properties:
+                        code:
+                            type: integer
+                            example: 404
+                        message:
+                            type: string
+                            example: "Курс не найден"
     use_validation_groups: true
     areas:
         path_patterns: # an array of regexps (document only routes under /api, except /api/doc)
