@@ -102,4 +102,47 @@ class TransactionRepository extends ServiceEntityRepository
     {
         return $this->findByUserWithFilters($user, ['type' => Transaction::TYPE_PAYMENT]);
     }
+
+    /**
+     * Найти активные аренды, срок которых истекает в интервале [$from, $to].
+     * Используется для рассылки уведомлений об окончании аренды.
+     *
+     * @return Transaction[]
+     */
+    public function findExpiringRentals(\DateTimeImmutable $from, \DateTimeImmutable $to): array
+    {
+        return $this->createQueryBuilder('t')
+            ->leftJoin('t.course', 'c')->addSelect('c')
+            ->leftJoin('t.user', 'u')->addSelect('u')
+            ->where('t.type = :type')
+            ->andWhere('t.validUntil > :from')
+            ->andWhere('t.validUntil <= :to')
+            ->setParameter('type', Transaction::TYPE_PAYMENT)
+            ->setParameter('from', $from)
+            ->setParameter('to', $to)
+            ->orderBy('u.email', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Найти все транзакции-оплаты за указанный период.
+     * Используется для формирования ежемесячного отчёта.
+     *
+     * @return Transaction[]
+     */
+    public function findPaymentsByPeriod(\DateTimeImmutable $from, \DateTimeImmutable $to): array
+    {
+        return $this->createQueryBuilder('t')
+            ->leftJoin('t.course', 'c')->addSelect('c')
+            ->where('t.type = :type')
+            ->andWhere('t.createdAt >= :from')
+            ->andWhere('t.createdAt < :to')
+            ->setParameter('type', Transaction::TYPE_PAYMENT)
+            ->setParameter('from', $from)
+            ->setParameter('to', $to)
+            ->orderBy('c.title', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

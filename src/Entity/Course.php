@@ -33,6 +33,11 @@ class Course
     #[Assert\Length(max: 255)]
     private ?string $code = null;
 
+    #[ORM\Column(length: 255)]
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 255)]
+    private ?string $title = null;
+
     #[ORM\Column(type: 'smallint')]
     #[Assert\NotNull]
     #[Assert\Choice(choices: [self::TYPE_FREE, self::TYPE_RENT, self::TYPE_FULL])]
@@ -62,6 +67,18 @@ class Course
     public function setCode(string $code): static
     {
         $this->code = $code;
+
+        return $this;
+    }
+
+    public function getTitle(): ?string
+    {
+        return $this->title;
+    }
+
+    public function setTitle(string $title): static
+    {
+        $this->title = $title;
 
         return $this;
     }

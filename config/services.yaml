@@ -7,6 +7,13 @@ parameters:
     # Сумма начального зачисления на счёт при регистрации нового пользователя
     app.payment.initial_deposit: 1000.0
 
+    # Email для отправки служебных отчётов
+    app.report.email: 'admin@study-on.local'
+
+    # От кого отправляются письма сервиса
+    app.notification.from_email: 'noreply@study-on.local'
+    app.notification.from_name:  'StudyOn Billing'
+
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -44,3 +51,14 @@ services:
     App\Service\PaymentService:
         arguments:
             $initialDeposit: '%app.payment.initial_deposit%'
+
+    App\Command\PaymentEndingNotificationCommand:
+        arguments:
+            $fromEmail: '%app.notification.from_email%'
+            $fromName:  '%app.notification.from_name%'
+
+    App\Command\PaymentReportCommand:
+        arguments:
+            $reportEmail: '%app.report.email%'
+            $fromEmail:   '%app.notification.from_email%'
+            $fromName:    '%app.notification.from_name%'

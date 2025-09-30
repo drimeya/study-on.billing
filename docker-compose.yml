@@ -42,6 +42,15 @@ services:
       - COMPOSER_ALLOW_SUPERUSER=1
     links:
       - postgres
+      - mailhog
+    networks:
+      - study-on-network
+  mailhog:
+    image: mailhog/mailhog
+    container_name: 'mailhog'
+    ports:
+      - "1025:1025"
+      - "8025:8025"
     networks:
       - study-on-network
 ###> doctrine/doctrine-bundle ###

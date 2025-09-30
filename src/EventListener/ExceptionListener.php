@@ -16,12 +16,11 @@ class ExceptionListener
         $this->loggerService = $loggerService;
     }
 
-    public function onKernelException(ExceptionEvent $event)
+    public function onKernelException(ExceptionEvent $event): void
     {
         $exception = $event->getThrowable();
         $request = $event->getRequest();
-        
-        // Логируем ошибку
+
         $this->loggerService->logError($exception->getMessage(), [
             'exception_class' => get_class($exception),
             'file' => $exception->getFile(),

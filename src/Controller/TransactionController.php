@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
-#[OA\Tag(name: 'Transactions')]
+#[OA\Tag(name: 'Транзакции')]
 class TransactionController extends AbstractController
 {
     public function __construct(
@@ -77,7 +77,6 @@ class TransactionController extends AbstractController
         $filter = $request->query->all('filter');
         $filters = [];
 
-        // Фильтр по типу транзакции
         if (!empty($filter['type'])) {
             $typeMap = [
                 'payment' => Transaction::TYPE_PAYMENT,
@@ -92,7 +91,6 @@ class TransactionController extends AbstractController
             $filters['type'] = $typeMap[$filter['type']];
         }
 
-        // Фильтр по коду курса
         if (!empty($filter['course_code'])) {
             $course = $this->courseRepository->findByCode($filter['course_code']);
             if ($course === null) {
@@ -104,7 +102,6 @@ class TransactionController extends AbstractController
             $filters['course'] = $course;
         }
 
-        // Фильтр истёкших транзакций
         if (!empty($filter['skip_expired'])) {
             $filters['skip_expired'] = true;
         }

@@ -1,0 +1,50 @@
+{% extends 'email/base.html.twig' %}
+
+{% block subject %}Отчёт об оплаченных курсах за {{ period_from|date('d.m.Y') }} – {{ period_to|date('d.m.Y') }}{% endblock %}
+
+{% block body %}
+<p style="margin:0 0 20px;font-size:16px;color:#1e293b;font-weight:bold;">
+    Отчёт об оплаченных курсах за период
+    {{ period_from|date('d.m.Y') }} &mdash; {{ period_to|date('d.m.Y') }}
+</p>
+
+{% if rows is empty %}
+    <p style="font-size:14px;color:#64748b;">За указанный период оплат не было.</p>
+{% else %}
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:24px;font-size:14px;">
+    <thead>
+        <tr style="background-color:#eff6ff;">
+            <th style="padding:10px 14px;text-align:left;color:#1d4ed8;border-bottom:2px solid #bfdbfe;">Название курса</th>
+            <th style="padding:10px 14px;text-align:center;color:#1d4ed8;border-bottom:2px solid #bfdbfe;">Тип курса</th>
+            <th style="padding:10px 14px;text-align:right;color:#1d4ed8;border-bottom:2px solid #bfdbfe;">Число аренд/<br>покупок</th>
+            <th style="padding:10px 14px;text-align:right;color:#1d4ed8;border-bottom:2px solid #bfdbfe;">Общая сумма</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr style="border-bottom:1px solid #f1f5f9;">
+            <td style="padding:11px 14px;color:#1e293b;"><strong>{{ row.title }}</strong></td>
+            <td style="padding:11px 14px;color:#475569;text-align:center;">
+                {% if row.type == 'rent' %}Аренда
+                {% elseif row.type == 'buy' %}Покупка
+                {% else %}Бесплатный
+                {% endif %}
+            </td>
+            <td style="padding:11px 14px;color:#475569;text-align:right;">{{ row.count }}</td>
+            <td style="padding:11px 14px;color:#475569;text-align:right;">{{ row.total|number_format(2, '.', ' ') }} ₽</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr style="background-color:#f8fafc;">
+            <td colspan="3" style="padding:12px 14px;font-weight:bold;color:#1e293b;text-align:right;border-top:2px solid #cbd5e1;">
+                Итого:
+            </td>
+            <td style="padding:12px 14px;font-weight:bold;color:#2563eb;text-align:right;border-top:2px solid #cbd5e1;">
+                {{ grand_total|number_format(2, '.', ' ') }} ₽
+            </td>
+        </tr>
+    </tfoot>
+</table>
+{% endif %}
+{% endblock %}

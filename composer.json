@@ -21,6 +21,7 @@
         "symfony/dotenv": "7.1.*",
         "symfony/flex": "^2",
         "symfony/framework-bundle": "7.1.*",
+        "symfony/mailer": "7.1.*",
         "symfony/maker-bundle": "^1.62",
         "symfony/monolog-bundle": "^3.10",
         "symfony/phpunit-bridge": "^7.1",

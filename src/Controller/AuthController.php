@@ -2,121 +2,85 @@
 
 namespace App\Controller;
 
+use App\Dto\UserDto;
+use App\Entity\User;
+use App\Service\PaymentService;
+use Doctrine\ORM\EntityManagerInterface;
+use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
+use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use App\Dto\UserDto;
-use JMS\Serializer\SerializerBuilder;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
-use App\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
-use Symfony\Component\HttpKernel\Event\ExceptionEvent;
-use OpenApi\Attributes as OA;
 use Symfony\Component\Security\Core\Annotation\Security;
-use Symfony\Component\Security\Core\Exception\AuthenticationException;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
-use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
-use App\Service\PaymentService;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class AuthController extends AbstractController
 {
-    private JWTTokenManagerInterface $jwtManager;
-
-    public function __construct(JWTTokenManagerInterface $jwtManager)
-    {
-        $this->jwtManager = $jwtManager;
+    public function __construct(
+        private JWTTokenManagerInterface $jwtManager,
+    ) {
     }
 
     #[OA\Post(
-        path: "/api/v1/auth",
-        summary: "Authenticate user",
+        path: '/api/v1/auth',
+        summary: 'Авторизация пользователя',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                type: "object",
+                type: 'object',
                 properties: [
-                    new OA\Property(property: "username", type: "string", example: "user@example.com"),
-                    new OA\Property(property: "password", type: "string", example: "password123")
+                    new OA\Property(property: 'username', type: 'string', example: 'user@example.com'),
+                    new OA\Property(property: 'password', type: 'string', example: 'password123'),
                 ]
             )
         ),
         responses: [
             new OA\Response(
                 response: 200,
-                description: "Successful authentication",
+                description: 'Успешная авторизация',
                 content: new OA\JsonContent(
-                    type: "object",
+                    type: 'object',
                     properties: [
-                        new OA\Property(property: "token", type: "string", description: "JWT access token"),
-                        new OA\Property(property: "refresh_token", type: "string", description: "JWT refresh token (valid 30 days)")
+                        new OA\Property(property: 'token', type: 'string', description: 'JWT access-токен'),
+                        new OA\Property(property: 'refresh_token', type: 'string', description: 'JWT refresh-токен (действует 30 дней)'),
                     ]
                 )
             ),
-            new OA\Response(
-                response: 401,
-                description: "Invalid credentials"
-            )
+            new OA\Response(response: 401, description: 'Неверные учётные данные'),
         ]
     )]
     #[Route('/api/v1/auth', name: 'api_auth', methods: ['POST'])]
-    public function auth(Request $request, EntityManagerInterface $entityManager, UserPasswordHasherInterface $passwordHasher): JsonResponse
+    public function auth(): JsonResponse
     {
-        try {
-            $content = json_decode($request->getContent(), true);
-
-            if (!$content || !isset($content['username']) || !isset($content['password'])) {
-                throw new AuthenticationException('Missing username or password');
-            }
-
-            $email = $content['username'];
-            $password = $content['password'];
-
-            $user = $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
-
-            if (!$user) {
-                throw new AuthenticationException('Invalid username');
-            }
-
-            if (!$passwordHasher->isPasswordValid($user, $password)) {
-                throw new AuthenticationException('Invalid password');
-            }
-        } catch (AuthenticationException $e) {
-            return new JsonResponse(['code' => 401, 'message' => $e->getMessage()], 401);
-        }
-
-        $token = $this->jwtManager->create($user);
-
-        return new JsonResponse(['token' => $token], 200);
+        // Маршрут полностью обрабатывается фаерволом Symfony (json_login + LexikJWT).
+        throw new \LogicException('Этот метод не вызывается напрямую.');
     }
 
     #[OA\Post(
-        path: "/api/v1/register",
-        summary: "Register a new user",
+        path: '/api/v1/register',
+        summary: 'Регистрация нового пользователя',
         requestBody: new OA\RequestBody(
             required: true,
-            content: new OA\JsonContent(ref: "#/components/schemas/UserDto")
+            content: new OA\JsonContent(ref: '#/components/schemas/UserDto')
         ),
         responses: [
             new OA\Response(
                 response: 201,
-                description: "User created successfully",
+                description: 'Пользователь успешно создан',
                 content: new OA\JsonContent(
-                    type: "object",
+                    type: 'object',
                     properties: [
-                        new OA\Property(property: "token", type: "string", description: "JWT access token"),
-                        new OA\Property(property: "refresh_token", type: "string", description: "JWT refresh token (valid 30 days)"),
-                        new OA\Property(property: "roles", type: "array", items: new OA\Items(type: "string"))
+                        new OA\Property(property: 'token', type: 'string', description: 'JWT access-токен'),
+                        new OA\Property(property: 'refresh_token', type: 'string', description: 'JWT refresh-токен (действует 30 дней)'),
+                        new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string')),
                     ]
                 )
             ),
-            new OA\Response(
-                response: 401,
-                description: "Validation error or user already exists"
-            )
+            new OA\Response(response: 400, description: 'Ошибка валидации'),
+            new OA\Response(response: 409, description: 'Пользователь с таким email уже существует'),
         ]
     )]
     #[Route('/api/v1/register', name: 'api_register', methods: ['POST'])]
@@ -127,36 +91,40 @@ class AuthController extends AbstractController
         RefreshTokenGeneratorInterface $refreshTokenGenerator,
         RefreshTokenManagerInterface $refreshTokenManager,
         PaymentService $paymentService
-    ): JsonResponse
-    {
-        $serializer = SerializerBuilder::create()->build();
-        $userDto = $serializer->deserialize($request->getContent(), UserDto::class, 'json');
+    ): JsonResponse {
+        $data = json_decode($request->getContent(), true) ?? [];
+
+        $userDto = new UserDto();
+        $userDto->username = $data['username'] ?? '';
+        $userDto->password = $data['password'] ?? '';
+
         $errors = $validator->validate($userDto);
 
-        try {
-            if (count($errors) > 0) {
-                $errorMessages = [];
-                foreach ($errors as $error) {
-                    $errorMessages[] = $error->getMessage();
-                }
-                throw new AuthenticationException(implode(', ', $errorMessages));
+        if (count($errors) > 0) {
+            $messages = [];
+            foreach ($errors as $error) {
+                $messages[] = $error->getMessage();
             }
 
-            $existingUser = $entityManager->getRepository(User::class)->findOneBy(['email' => $userDto->username]);
-            if ($existingUser) {
-                throw new AuthenticationException('User with this email already exists');
-            }
-        } catch (AuthenticationException $e) {
-            return new JsonResponse(['code' => 401, 'message' => $e->getMessage()], 401);
+            return new JsonResponse(['code' => 400, 'message' => implode(', ', $messages)], 400);
+        }
+
+        if ($entityManager->getRepository(User::class)->findOneBy(['email' => $userDto->username])) {
+            return new JsonResponse(['code' => 409, 'message' => 'Пользователь с таким email уже существует'], 409);
         }
 
         $user = User::fromDto($userDto);
         $user->setRoles(['ROLE_USER']);
-        $entityManager->persist($user);
-        $entityManager->flush();
 
-        // Начисляем стартовый депозит новому пользователю
-        $paymentService->deposit($user, $paymentService->getInitialDeposit());
+        try {
+            $entityManager->wrapInTransaction(function () use ($entityManager, $user, $paymentService): void {
+                $entityManager->persist($user);
+                $entityManager->flush();
+                $paymentService->deposit($user, $paymentService->getInitialDeposit());
+            });
+        } catch (\Throwable) {
+            return new JsonResponse(['code' => 500, 'message' => 'Ошибка при создании пользователя'], 500);
+        }
 
         $token = $this->jwtManager->create($user);
 
@@ -174,36 +142,33 @@ class AuthController extends AbstractController
     }
 
     #[OA\Get(
-        path: "/api/v1/users/current",
-        summary: "Get current authenticated user",
-        security: [["Bearer" => []]],
+        path: '/api/v1/users/current',
+        summary: 'Информация о текущем пользователе',
+        security: [['Bearer' => []]],
         responses: [
             new OA\Response(
                 response: 200,
-                description: "Returns the current authenticated user",
+                description: 'Данные авторизованного пользователя',
                 content: new OA\JsonContent(
-                    type: "object",
+                    type: 'object',
                     properties: [
-                        new OA\Property(property: "username", type: "string"),
-                        new OA\Property(property: "roles", type: "array", items: new OA\Items(type: "string")),
-                        new OA\Property(property: "balance", type: "number")
+                        new OA\Property(property: 'username', type: 'string'),
+                        new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string')),
+                        new OA\Property(property: 'balance', type: 'number'),
                     ]
                 )
             ),
-            new OA\Response(
-                response: 401,
-                description: "User not authenticated"
-            )
+            new OA\Response(response: 401, description: 'Пользователь не авторизован'),
         ]
     )]
-    #[Security(name: "Bearer")]
+    #[Security(name: 'Bearer')]
     #[Route('/api/v1/users/current', name: 'api_current_user', methods: ['GET'])]
     public function getCurrentUser(): JsonResponse
     {
         $user = $this->getUser();
 
         if (!$user) {
-            return new JsonResponse(['code' => 401, 'message' => 'User not authenticated'], 401);
+            return new JsonResponse(['code' => 401, 'message' => 'Пользователь не авторизован'], 401);
         }
 
         return new JsonResponse([
@@ -211,22 +176,5 @@ class AuthController extends AbstractController
             'roles' => $user->getRoles(),
             'balance' => $user->getBalance(),
         ], 200);
-    }
-
-    public function onKernelException(ExceptionEvent $event): void
-    {
-        $exception = $event->getThrowable();
-        $response = new JsonResponse([
-            'code' => $exception instanceof HttpExceptionInterface ? $exception->getStatusCode() : 500,
-            'message' => $exception->getMessage(),
-        ]);
-
-        if ($exception instanceof HttpExceptionInterface) {
-            $response->setStatusCode($exception->getStatusCode());
-        } else {
-            $response->setStatusCode(500);
-        }
-
-        $event->setResponse($response);
     }
 }

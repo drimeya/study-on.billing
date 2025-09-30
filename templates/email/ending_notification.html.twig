@@ -1,0 +1,38 @@
+{% extends 'email/base.html.twig' %}
+
+{% block subject %}Напоминание об окончании аренды курсов{% endblock %}
+
+{% block body %}
+<p style="margin:0 0 16px;font-size:16px;color:#1e293b;font-weight:bold;">
+    Уважаемый клиент!
+</p>
+
+<p style="margin:0 0 20px;font-size:15px;color:#334155;line-height:1.6;">
+    У вас есть курсы, срок аренды которых подходит к концу:
+</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:24px;">
+    <thead>
+        <tr style="background-color:#eff6ff;">
+            <th style="padding:10px 14px;text-align:left;font-size:13px;color:#1d4ed8;border-bottom:2px solid #bfdbfe;">Курс</th>
+            <th style="padding:10px 14px;text-align:right;font-size:13px;color:#1d4ed8;border-bottom:2px solid #bfdbfe;white-space:nowrap;">Действует до</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for transaction in transactions %}
+        <tr style="border-bottom:1px solid #f1f5f9;">
+            <td style="padding:12px 14px;font-size:14px;color:#334155;">
+                <strong>{{ transaction.course.title }}</strong>
+            </td>
+            <td style="padding:12px 14px;font-size:14px;color:#ef4444;text-align:right;white-space:nowrap;">
+                {{ transaction.validUntil|date('d.m.Y H:i') }}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<p style="margin:0 0 8px;font-size:14px;color:#64748b;line-height:1.5;">
+    Чтобы продолжить обучение, перейдите в раздел курсов и продлите аренду.
+</p>
+{% endblock %}

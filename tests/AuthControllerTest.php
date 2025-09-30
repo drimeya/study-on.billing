@@ -29,7 +29,7 @@ class AuthControllerTest extends WebTestCase
             'password' => 'password123'
         ]);
 
-        $this->assertEquals(Response::HTTP_UNAUTHORIZED, $response->getStatusCode());
+        $this->assertEquals(Response::HTTP_CONFLICT, $response->getStatusCode());
     }
 
     public function testSuccessfulAuth()
